@@ -5,8 +5,10 @@ var sentimental = require('Sentimental').analyze;
 var request = require("request");
 var util = require('util');
 var jsdom = require('jsdom-nogyp');
+var Entities = require('html-entities').XmlEntities;
+var entities = new Entities();
 
-analyse('http://www.cityindex.co.uk/spread-betting/');
+analyse('http://www.ig.com/uk/spread-betting');
 
 
 function analyse(url){
@@ -16,7 +18,9 @@ function analyse(url){
             var document = window.document || {};
 
             var html = document.innerHTML;
+
             var analysis = exploreHtml(html);
+            console.log(util.inspect(analysis, false, null));
             var links = extractLinks(window);
             extractAllHtml(links,0,[],exploreAndMerge,{analysis:analysis});
 
@@ -28,14 +32,17 @@ function exploreHtml(html){
     var $ = cheerio.load(html);
 
     var text = '';
-    $('a, img, form, span, .footer, #footer, .header, #header, .foot, #foot, .head, #head, script, style').remove();
+    $('a, img, span, .footer, #footer, .header, #header, .foot, #foot, .head, #head, script, style, iframe').remove();
 
     $('title, p, h1, .content, #content').each(function(i, element){
-        var t = $(this).text().trim();
+        var t = $(this).text().replace(/(\r\n|\n|\r|\t)/gm," ").replace(/  /gm," ").trim();
+        t = entities.decode(t);
         if(t.length > 0){
             text+=' '+t;
         }
     });
+
+
     var keywords = gramophone.extract(text, {ngrams: 2, html: true, limit: 5, score: true, stem : true});
     var sentiment = sentimental(text);
 
@@ -115,10 +122,12 @@ function exploreAndMerge(htmlList, options){
         var htmlPage = htmlList[i];
         var html = htmlPage.html;
         var analysis = exploreHtml(html);
-        mainAnalysis.linkedContent.push({
-            href : htmlPage.href,
-            analysis : analysis
-        });
+        if(!!analysis && !!analysis.keywords){
+            mainAnalysis.linkedContent.push({
+                href : htmlPage.href,
+                analysis : analysis
+            });
+        }
     }
     console.log(util.inspect(mainAnalysis, false, null));
 }
