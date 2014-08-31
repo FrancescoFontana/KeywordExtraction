@@ -6,6 +6,9 @@ var request = require("request");
 var util = require('util');
 var jsdom = require('jsdom-nogyp');
 
+analyse('http://www.cityindex.co.uk/spread-betting/');
+
+
 function analyse(url){
     jsdom.env({
         url : url,
